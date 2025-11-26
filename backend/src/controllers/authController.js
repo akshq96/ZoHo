@@ -237,5 +237,31 @@ const updateProfile = async (req, res) => {
         return response(res, 500, "Internal Server Error");
     }
 };
+const checkAuthenticated = async(req, res) => {
+    try {
+        const userId = req.user.userId; // Assuming user ID is available in req.user
+        if(!userId){
+            return response(res, 404, "User is not authenticated");
+        }
+        const user = await User.findById(userId);
+        if(!user){
+            return response(res, 404, "User not found");
+        }
+        return response(res, 200, "User is authenticated", user);
+    } catch (error) {
+        console.error("Error in checkAuthenticated:", error);
+        return response(res, 500, "Internal Server Error");
+    }
+};
+// LOGOUT CONTROLLER
+const logout = (req, res) => {
+    try {
+        res.ookie("auth_token","",{expires:new Date(0)}); // Clear the auth token cookie
+        return response(res, 200, "Logged out successfully");
+    } catch (error) {
+        console.error("Error in logout:", error);
+        return response(res, 500, "Internal Server Error");
+    }
+};
 // Export controllers
-module.exports = { sendOtp, verifyOtp , updateProfile};
+module.exports = { sendOtp, verifyOtp , updateProfile, logout, checkAuthenticated};
