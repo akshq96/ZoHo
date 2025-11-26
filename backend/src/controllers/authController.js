@@ -100,9 +100,9 @@ const { sendOtpToEmail } = require("../services/emailService"); // Email OTP bhe
 const { otpGenerater } = require("../utils/otpGenerator"); // Random OTP generate karta hai
 const response = require('../utils/responseHandler'); // Standard response helper
 const twilioService = require("../services/twilioService"); // Twilio SMS OTP service
+const { uploadFileToCloudinary } = require("../config/cloudinaryConfig");
 
-//         SEND OTP CONTROLLER
-
+// SEND OTP CONTROLLER
 const sendOtp = async (req, res) => {
     const { phoneNumber, phoneSuffix, email } = req.body; // User ka input email/phone
     const otp = otpGenerater(); // Naya OTP generate
@@ -110,7 +110,6 @@ const sendOtp = async (req, res) => {
 
     try {
         let user;
-
         //  EMAIL OTP FLOW
         if (email) { // Agar user ne email diya hai
             user = await User.findOne({ email }); // Email se user dhundo
@@ -125,7 +124,6 @@ const sendOtp = async (req, res) => {
 
             return response(res, 200, "OTP sent to email", { email }); // Success response
         }
-
         //  PHONE OTP FLOW 
         if (!phoneNumber || !phoneSuffix) { // Phone OTP ke liye dono required
             return response(res, 400, "Phone number and phone Suffix is required");
@@ -146,7 +144,6 @@ const sendOtp = async (req, res) => {
         return response(res, 500, "Internal Server Error");
     }
 };
-
 //        VERIFY OTP CONTROLLER
 const verifyOtp = async (req, res) => {
     const { phoneNumber, phoneSuffix, email, otp } = req.body; // User input for verify
@@ -170,7 +167,6 @@ const verifyOtp = async (req, res) => {
             ) {
                 return response(res, 400, "Invalid or expired OTP for email");
             }
-
             user.isVerified = true; // User verify
             user.emailOtp = null; // OTP clear
             user.emailOtpExpiry = null; // Expiry clear
@@ -193,11 +189,9 @@ const verifyOtp = async (req, res) => {
             if (result.status !== "approved") {
                 return response(res, 400, "Invalid or expired OTP for phone number");
             }
-
             user.isVerified = true; // Verified mark
             await user.save(); // Save
         }
-
         // TOKEN GENERATE & COOKIE SET 
         const token = user.generateToken(user._id); // JWT token generate
         res.cookie("auth_token", token, {
@@ -220,17 +214,28 @@ const updateProfile = async (req, res) => {
         const user = await User.findById(userId);
         const file = req.file;
         if(file){
-            const uploadResult = await cloudinary.uploader.upload(file.path, {
-                folder: 'profile_pictures',
-                width: 150,
-                crop: "scale"
-            });
+            const uploadResult = await uploadFileToCloudinary(file);
+            console.log("Upload Result:", uploadResult);
+            user.profilePicture= uploadResult?.secure_url;
+            }else if(req.body.profilePicture){
+                user.profilePicture= req.body.profilePicture;
+            }
+            if(username){
+                user.username = username;
+            }
+            if(about){
+                user.about = about;
+            }
+            if(agreedToTerms){
+                user.agreedToTerms = agreedToTerms;
+            }
+            await user.save();
+            return response(res, 200, "Profile updated successfully",user);
         }
-    }catch(error){
+        catch(error){
         console.error("Error in updateProfile:", error);
         return response(res, 500, "Internal Server Error");
     }
 };
-
 // Export controllers
-module.exports = { sendOtp, verifyOtp };
+module.exports = { sendOtp, verifyOtp , updateProfile};

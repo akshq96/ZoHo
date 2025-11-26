@@ -25,7 +25,6 @@ const uploadFileToCloudinary = (file) => {
         })
     })
 };
-
 const multerMiddleware = multer({ dest: 'uploads/' }).single('media');
 module.exports = {
     uploadFileToCloudinary,
